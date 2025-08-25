@@ -1,0 +1,14 @@
+
+services:
+  multi-source-sentiment-analysis-frontend: # Name of the frontend service
+    build: frontend/multi-source-sentiment-analysis
+    ports: 
+      - "10005:80"
+    
+  multi-source-sentiment-analysis-backend: # Name of the backend service
+    build: backend
+    environment:
+        OPENAI_API_KEY: ${OPENAI_API_KEY}
+        POLYGON_API_KEY: ${POLYGON_API_KEY}
+    ports:
+      - "8005:8000"
