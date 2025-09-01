@@ -8,7 +8,27 @@ services:
   multi-source-sentiment-analysis-backend: # Name of the backend service
     build: backend
     environment:
-        OPENAI_API_KEY: ${OPENAI_API_KEY}
-        POLYGON_API_KEY: ${POLYGON_API_KEY}
+        OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+        POLYGON_API_KEY_FILE: /run/secrets/polygon_api_key
+        GOOGLE_API_KEY_FILE: /run/secrets/google_api_key
+        REDDIT_CLIENT_ID_FILE: /run/secrets/reddit_client_id
+        REDDIT_CLIENT_SECRET_FILE: /run/secrets/reddit_client_secret
+    secrets:
+      - openai_api_key
+      - polygon_api_key
+      - google_api_key
+      - reddit_client_id
+      - reddit_client_secret
     ports:
       - "8005:8000"
+secrets:
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt
+  polygon_api_key:
+    file: ./secrets/polygon_api_key.txt
+  google_api_key:
+    file: ./secrets/google_api_key.txt
+  reddit_client_id:
+    file: ./secrets/reddit_client_id.txt
+  reddit_client_secret:
+    file: ./secrets/reddit_client_secret.txt

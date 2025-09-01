@@ -21,4 +21,6 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-tabulate
+          - types-requests
+          - types-python-dateutil
   

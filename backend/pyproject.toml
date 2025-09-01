@@ -19,9 +19,10 @@ dependencies = [
     "bonobo (>=0.6.4,<0.7.0)",
     "polygon-api-client (>=1.15.3,<2.0.0)",
     "nltk (>=3.9.1,<4.0.0)",
-    "googleapi (>=0.1.0,<0.2.0)"
+    "googleapi (>=0.1.0,<0.2.0)",
+    "types-requests (>=2.32.4.20250809,<3.0.0.0)",
+    "praw (>=7.8.1,<8.0.0)"
 ]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

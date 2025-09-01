@@ -17,7 +17,7 @@
   </header>
 
   <main>
-    <Display :logoData="logoData" :description="description" :stockInfo="stockInfo" :stockDataLabels="stockDataLabels" :stockDataValues="stockDataValues" />
+    <Display :logoData="logoData" :description="description" :stockInfo="stockInfo" :stockDataLabels="stockDataLabels" :stockDataValues="stockDataValues" :youtubeSentiment="youtubeSentiment" :redditSentiment="redditSentiment" />
   </main>
 </template>
 
@@ -38,7 +38,9 @@ export default {
         isLoading: false,
         selectedOption: "single-threaded",
         stockDataLabels: [],
-        stockDataValues: []
+        stockDataValues: [],
+        youtubeSentiment: -1.0,
+        redditSentiment: -1.0,
       };
     },
     methods: {
@@ -82,11 +84,18 @@ export default {
 
           apiUrl = 'http://127.0.0.1:8005/get-stock-data/';
           response = await axios.post(apiUrl, requestBody, config);
-          
           this.stockDataLabels = response.data.map(obj => obj.month);
           this.stockDataValues = response.data.map(obj => obj.price);
-          console.log("IN App, labels: " + this.stockDataLabels);
-          console.log("IN App, values: " + this.stockDataValues);
+
+          apiUrl = 'http://127.0.0.1:8005/get-youtube-sentiment/';
+          response = await axios.post(apiUrl, requestBody, config);
+          this.youtubeSentiment = response.data.score;
+          
+          apiUrl = 'http://127.0.0.1:8005/get-reddit-sentiment/';
+          response = await axios.post(apiUrl, requestBody, config);
+          this.redditSentiment = response.data.score;
+          console.log(this.redditSentiment);
+          
         } catch (error) {
           console.error('Error fetching data:', error);
         } finally {
@@ -116,6 +125,8 @@ export default {
           var stockData = response.data.stock_data;
           this.stockDataLabels = stockData.map(obj => obj.month);
           this.stockDataValues = stockData.map(obj => obj.price);
+          this.youtubeSentiment = response.data.youtube_sentiment.score;
+          this.redditSentiment = response.data.reddit_sentiment.score;
         } catch (error) {
           console.error('Error fetching data:', error);
         } finally {
