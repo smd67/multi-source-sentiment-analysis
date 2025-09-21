@@ -74,9 +74,7 @@ def perform_reddit_extract_comment_thread_data(
 def reddit_transform_comment_thread_data(
     comment_thread_data: List[str],
 ) -> Generator[Tuple[ChainType, Sentiment], None, None]:
-    percentage = perform_reddit_transform_comment_thread_data(
-        comment_thread_data
-    )
+    percentage = perform_reddit_transform_comment_thread_data(comment_thread_data)
     yield (ChainType.REDDIT_SENTIMENT_DATA, Sentiment(score=percentage))
 
 

@@ -97,9 +97,7 @@ def extract_comment_thread_data(
         Returs a dictionary with an "items" key whose value is the JSON data
         of all of the responses.
     """
-    data: Dict[str, List[Any]] = perform_extract_comment_thread_data(
-        search_data
-    )
+    data: Dict[str, List[Any]] = perform_extract_comment_thread_data(search_data)
     yield data
 
 

@@ -1,31 +1,44 @@
-from opentelemetry import trace  # pylint: disable=import-error
-from opentelemetry.sdk.resources import Resource  # pylint: disable=import-error
-from opentelemetry.sdk.trace import ( # pylint: disable=import-error
-    TracerProvider,
-) 
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-    # pylint: disable=import-error
-    OTLPSpanExporter,
-)
-from opentelemetry.sdk.trace.export import (
-    SimpleSpanProcessor,
-)  # pylint: disable=import-error
-from opentelemetry.trace.propagation.tracecontext import (
-    TraceContextTextMapPropagator,
-) # pylint: disable=import-error
-from opentelemetry.trace import StatusCode, Status # pylint: disable=import-error
-
+"""
+Decorators to simplify opentel tracing.
+"""
 
 import functools
 
+from opentelemetry import trace  # pylint: disable=import-error
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # pylint: disable=import-error, disable=line-too-long
+    OTLPSpanExporter,
+)
+from opentelemetry.sdk.resources import Resource  # pylint: disable=import-error
+from opentelemetry.sdk.trace import TracerProvider  # pylint: disable=import-error
+from opentelemetry.sdk.trace.export import (  # pylint: disable=import-error
+    SimpleSpanProcessor,
+)
+from opentelemetry.trace import Status, StatusCode  # pylint: disable=import-error
+from opentelemetry.trace.propagation.tracecontext import (  # pylint: disable=import-error, disable=line-too-long
+    TraceContextTextMapPropagator,
+)
+
 
 def span_decorator(func):
+    """
+    Decorator to create a new span.
+
+    Parameters
+    ----------
+    func :
+        The wrapped function.
+
+    Returns
+    -------
+    _type_
+        A new function that includes the wrapper.
+    """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         print(f"IN span_decorator. name={func.__name__}")
         result = None
         if not hasattr(span_decorator, "span_context"):
-            print(f"New Root Span")
             resource = Resource.create({"service.name": "stock-analyzer"})
             provider = TracerProvider(resource=resource)
             trace.set_tracer_provider(provider)

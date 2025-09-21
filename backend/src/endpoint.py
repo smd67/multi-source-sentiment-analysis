@@ -21,6 +21,7 @@ from model import (  # pylint: disable=import-error
     CombinedData,
     Description,
     Logo,
+    Sentiment,
     StockData,
     StockInfo,
     TargetQuery,
@@ -53,14 +54,26 @@ app.add_middleware(
 )
 
 # Global data
-KV_STORE: Dict[ChainType, Any] = (
-    {}
-)  # Key-Value storage for the transform results
+KV_STORE: Dict[ChainType, Any] = {}  # Key-Value storage for the transform results
 
 
 @app.post("/get-logo/")
 @span_decorator
 def get_logo(query: TargetQuery) -> List[Logo]:
+    """
+    API call to get a company's logo based on it's common name.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    List[Logo]
+        A list of urls ranked by Levenshtein distance. This ensures we get a logo
+        that is close to what we queried and not just the most popular one.
+    """
     url = "https://www.brandsoftheworld.com"
 
     results = []
@@ -92,15 +105,11 @@ def get_logo(query: TargetQuery) -> List[Logo]:
                 result_element["url"] = url
             for a in element.find_all("span"):
                 result_element["title"] = a.text
-                result_element["distance"] = Levenshtein.distance(
-                    target, a.text
-                )
+                result_element["distance"] = Levenshtein.distance(target, a.text)
             results.append(result_element)
 
         sorted_by_index = sorted(results, key=lambda x: x["index"])
-        sorted_by_distance = sorted(
-            sorted_by_index, key=lambda x: x["distance"]
-        )
+        sorted_by_distance = sorted(sorted_by_index, key=lambda x: x["distance"])
 
     return [Logo(**logo_dict) for logo_dict in sorted_by_distance]
 
@@ -108,6 +117,19 @@ def get_logo(query: TargetQuery) -> List[Logo]:
 @app.post("/get-description/")
 @span_decorator
 def get_description(query: TargetQuery) -> Description:
+    """
+    Use chat gpt to write a simple description of the target company.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    Description
+        A simple description of the company.
+    """
     target = query.target
     current_span = trace.get_current_span()
     current_span.set_attribute("target_query", target)
@@ -131,6 +153,19 @@ def get_description(query: TargetQuery) -> Description:
 @app.post("/get-stock-info/")
 @span_decorator
 def get_stock_info(query: TargetQuery) -> StockInfo:
+    """
+    Get stock info such as ticker name and closing price.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    StockInfo
+        An object containing the ticker symbol, company name, and closing price.
+    """
     target = query.target
     current_span = trace.get_current_span()
     current_span.set_attribute("target_query", target)
@@ -171,6 +206,19 @@ def get_stock_info(query: TargetQuery) -> StockInfo:
 @app.post("/get-stock-data/")
 @span_decorator
 def get_stock_data(query: TargetQuery) -> List[StockData]:
+    """
+    Get historical stock price data from polygon.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    List[StockData]
+        A list of ("month", "stock price") objects for the last 12 months.
+    """
     months = [
         None,
         "Jan",
@@ -217,7 +265,26 @@ def get_stock_data(query: TargetQuery) -> List[StockData]:
 
 @app.post("/get-all-data/")
 @span_decorator
-def get_all_data(query: TargetQuery):
+def get_all_data(query: TargetQuery) -> CombinedData:
+    """
+    This is a method that collects all data in a single call using a
+    multi-threaded pipeline.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    CombinedData
+        All of the collected data in a single object.
+
+    Raises
+    ------
+    Exception
+        Will raise an exception if a pipeline error occurs.
+    """
     current_span = trace.get_current_span()
     current_span.set_attribute("target_query", query.target)
 
@@ -256,17 +323,20 @@ def get_all_data(query: TargetQuery):
     )
     result = bonobo.run(graph)
 
+    # Check for pipeline errors and raise an exception.
     error_list = []
     for node in result:
-         stat_string = node.get_statistics_as_string(prefix=' ')
-         print(f"stat_string={stat_string}")
-         stat_array = stat_string.split(' ')
-         if any([True if "err=" in stat else False for stat in stat_array]):
+        stat_string = node.get_statistics_as_string(prefix=" ")
+        print(f"stat_string={stat_string}")
+        stat_array = stat_string.split(" ")
+        if any([True if "err=" in stat else False for stat in stat_array]):
             print(f"Errors: {str(node)}")
             error_list.append(str(node))
     if len(error_list) > 0:
-         raise Exception(f"Errors occurred during pipeline execution: {','.join(error_list)}")
-    
+        raise Exception(
+            f"Errors occurred during pipeline execution: {','.join(error_list)}"
+        )
+
     logo = KV_STORE[ChainType.LOGO_DATA]
     description = KV_STORE[ChainType.DESCRPTION_DATA]
     stock_info = KV_STORE[ChainType.STOCK_INFO_DATA]
@@ -285,7 +355,20 @@ def get_all_data(query: TargetQuery):
 
 @app.post("/get-youtube-sentiment/")
 @span_decorator
-def get_youtube_sentiment(query: TargetQuery):
+def get_youtube_sentiment(query: TargetQuery) -> Sentiment:
+    """
+    Get the youtube sentiment for a company run as a pipeline.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    Sentiment
+        The results of the sentiment analysis
+    """
     current_span = trace.get_current_span()
     current_span.set_attribute("target_query", query.target)
 
@@ -305,7 +388,20 @@ def get_youtube_sentiment(query: TargetQuery):
 
 @app.post("/get-reddit-sentiment/")
 @span_decorator
-def get_reddit_sentiment(query: TargetQuery):
+def get_reddit_sentiment(query: TargetQuery) -> Sentiment:
+    """
+    Get the reddit sentiment for a company run as a pipeline.
+
+    Parameters
+    ----------
+    query : TargetQuery
+        The common name of the company.
+
+    Returns
+    -------
+    Sentiment
+        The results of the sentiment analysis
+    """
     current_span = trace.get_current_span()
     current_span.set_attribute("target_query", query.target)
 
@@ -324,26 +420,57 @@ def get_reddit_sentiment(query: TargetQuery):
 
 
 def extract_logo_data() -> Generator[Tuple[ChainType, List[Logo]], None, None]:
+    """
+    Wrapper function to get the logo suitable for a pipeline.
+
+    Yields
+    ------
+    Generator[Tuple[ChainType, List[Logo]], None, None]
+        A generator for pipeline usage.
+    """
     query = SERVICES["query"]
     data = get_logo(query)
     yield (ChainType.LOGO_DATA, data)
 
 
-def extract_description() -> (
+def extract_description() -> Generator[Tuple[ChainType, Description], None, None]:
+    """
+    Wrapper function to get a company description suitable for a pipeline.
+
+    Yields
+    ------
     Generator[Tuple[ChainType, Description], None, None]
-):
+        A generator containing the type and object
+    """
     query = SERVICES["query"]
     data = get_description(query)
     yield (ChainType.DESCRPTION_DATA, data)
 
 
 def extract_stock_info() -> Generator[Tuple[ChainType, StockInfo], None, None]:
+    """
+    Wrapper function to get a company stock information suitable for a pipeline.
+
+    Yields
+    ------
+    Generator[Tuple[ChainType, StockInfo], None, None]
+         A generator containing the type and object
+    """
     query = SERVICES["query"]
     data = get_stock_info(query)
     yield (ChainType.STOCK_INFO_DATA, data)
 
 
 def extract_stock_data() -> Generator[Tuple[ChainType, StockInfo], None, None]:
+    """
+    Wrapper function to get a company's historical stock data suitable for
+    a pipeline.
+
+    Yields
+    ------
+    Generator[Tuple[ChainType, StockInfo], None, None]
+        A generator containing the type and object
+    """
     query = SERVICES["query"]
     data = get_stock_data(query)
     yield (ChainType.STOCK_PRICE_DATA, data)

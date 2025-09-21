@@ -15,6 +15,7 @@ The Stock Analyzer is a simple application that allows you to examine informatio
 * Requests
 * NLTK
 * Bonobo
+* Fast API
 
 ### Observability
 * Open Telemetry Collector

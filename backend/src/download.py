@@ -8,6 +8,9 @@ import nltk
 
 
 def download():
+    """
+    Downloads NLTK libraries.
+    """
     try:
         _create_unverified_https_context = ssl._create_unverified_context
     except AttributeError:

@@ -22,7 +22,7 @@ def main(n: int, profile: str):
     url = "http://localhost:10005"
 
     search_list = []
-    with open(profile, 'r') as file:
+    with open(profile, "r") as file:
         for line in file:
             search_list.append(line)
 
@@ -41,8 +41,8 @@ def main(n: int, profile: str):
             page.locator("button.my-button").click()
             time.sleep(180)
         browser.close()
-        
-        
+
+
 if __name__ == "__main__":
 
     # 1. Create an ArgumentParser object
@@ -52,7 +52,11 @@ if __name__ == "__main__":
 
     # 2. Add arguments
     parser.add_argument("-n", type=int, help="number of executions")
-    parser.add_argument("--profile", type=str, help="The traffic profile containing a list of target searches")
+    parser.add_argument(
+        "--profile",
+        type=str,
+        help="The traffic profile containing a list of target searches",
+    )
 
     # 3. Parse the arguments
     args = parser.parse_args()
