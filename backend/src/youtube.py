@@ -1,21 +1,21 @@
-import os
+"""
+This module implements the youtube sentiment analysis functions.
+"""
+
+import random
+from typing import Any, Dict, Generator, List, Tuple
 
 import googleapiclient.discovery
-import random
-from bonobo.config import use
-from model import ( # pylint: disable=import-error
-    ChainType,
-    TargetQuery,
-    Sentiment,
+from common import (  # pylint: disable=import-error
+    SERVICES,
+    get_secret,
+    perform_sentiment_analysis,
 )
-from common import perform_sentiment_analysis, get_secret  # pylint: disable=import-error
-from typing import List, Tuple, Generator, Dict, Any
+from decorators import span_decorator  # pylint: disable=import-error
+from model import ChainType, Sentiment  # pylint: disable=import-error
 
 
-@use("query")
-def extract_search_data(
-    query: TargetQuery,
-) -> Generator[List[Tuple[str, str]], None, None]:
+def extract_search_data() -> Generator[List[Tuple[str, str]], None, None]:
     """
     Search for videos that match a query string.
 
@@ -29,8 +29,15 @@ def extract_search_data(
     Generator[list[tuple[str, str]], None, None]
         A list of tuple pairs (video_id, channel_id)
     """
+    search_data = perform_extract_search_data()
+    yield search_data
+
+
+@span_decorator
+def perform_extract_search_data() -> List[Any]:
     MAX_RESULTS_PER_PAGE = 50
     MAX_PAGES = 5
+    query = SERVICES["query"]
 
     api_service_name = "youtube"
     api_version = "v3"
@@ -70,7 +77,7 @@ def extract_search_data(
             video_id = item.get("id", {}).get("videoId")
             channel_id = item.get("snippet", {}).get("channelId")
             search_data.append((video_id, channel_id))
-    yield search_data
+    return search_data
 
 
 def extract_comment_thread_data(
@@ -90,6 +97,14 @@ def extract_comment_thread_data(
         Returs a dictionary with an "items" key whose value is the JSON data
         of all of the responses.
     """
+    data: Dict[str, List[Any]] = perform_extract_comment_thread_data(
+        search_data
+    )
+    yield data
+
+
+@span_decorator
+def perform_extract_comment_thread_data(search_data: List[Tuple[str, str]]):
     api_service_name = "youtube"
     api_version = "v3"
     api_key = get_secret("GOOGLE_API_KEY")
@@ -118,7 +133,7 @@ def extract_comment_thread_data(
             data["items"].append(response)
         except googleapiclient.errors.HttpError:
             pass
-    yield data
+    return data
 
 
 def transform_comment_thread_data(
@@ -141,6 +156,12 @@ def transform_comment_thread_data(
     """
 
     print("in transform_comment_thread_data")
+    percentage = perform_transform_comment_thread_data(comment_thread_data)
+    yield (ChainType.YOUTUBE_SENTIMENT_DATA, Sentiment(score=percentage))
+
+
+@span_decorator
+def perform_transform_comment_thread_data(comment_thread_data: Dict) -> float:
     POSITIVE_THRESHOLD = 0.1
     NEGATIVE_THRESHOLD = -0.1
     data = []
@@ -163,8 +184,9 @@ def transform_comment_thread_data(
         for val in data
         if val >= POSITIVE_THRESHOLD or val <= NEGATIVE_THRESHOLD
     ]
-    print(len(data), len(boolean_array))
     true_count = sum(boolean_array)
     total_elements = len(boolean_array)
-    percentage = (true_count / total_elements) * 100
-    yield (ChainType.YOUTUBE_SENTIMENT_DATA, Sentiment(score=percentage))
+    percentage = (
+        (true_count / total_elements) * 100.0 if total_elements > 0 else 0.0
+    )
+    return percentage

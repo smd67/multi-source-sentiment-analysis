@@ -1,0 +1,31 @@
+pepsi
+coke
+apple
+ibm
+netapp
+netapp
+netapp
+netapp
+netapp
+tesla
+yelp
+ford
+gm
+oracle
+cigna
+amazon
+boeing
+caterpillar
+caterpillar
+caterpillar
+caterpillar
+caterpillar
+disney
+home depot
+salesforce
+verizon
+verizon
+verizon
+verizon
+verizon
+united health group

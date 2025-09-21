@@ -1,0 +1,35 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889" # Expose Prometheus metrics on this endpoint
+  otlp/tempo:
+    endpoint: "tempo:4444" # Tempo service name and OTLP gRPC port
+    tls:
+      insecure: true
+
+connectors:
+  spanmetrics:
+    histogram:
+      explicit:
+        buckets: [100us, 1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
+    dimensions:
+      - name: http.method
+      - name: http.status_code
+      - name: operation
+      - name: status_code
+      - name: target_query
+  
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [spanmetrics, otlp/tempo]
+    metrics:
+      receivers: [spanmetrics] # Receive metrics from spanmetrics connector
+      exporters: [prometheus]

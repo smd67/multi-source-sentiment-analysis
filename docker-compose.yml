@@ -21,6 +21,63 @@ services:
       - reddit_client_secret
     ports:
       - "8005:8000"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana 
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin # Change this to a secure password
+    depends_on:
+      - tempo
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  # Tempo for storing and querying traces
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/var/tempo # Persistent storage for Tempo data
+
+    ports:
+      - "3200:3200" # server OTLP HTTP
+      - "9095:9095" # server OTLP gRPC
+      - "4443:4443" # distributor http
+      - "4444:4444" # distributor gRPC
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8888:8888" # Prometheus metrics exposed by the collector
+      - "8889:8889" # Prometheus spanmetrics exposed by the collector
+    depends_on:
+      - tempo
+
+volumes:
+  grafana_data:
+  tempo_data:
+  prometheus_data:
+
 secrets:
   openai_api_key:
     file: ./secrets/openai_api_key.txt

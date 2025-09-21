@@ -3,7 +3,6 @@ Playwright driver that executes operations based on a profile.
 """
 
 import argparse
-import os
 from datetime import date, datetime
 from typing import Any, Dict, Generator, List, Tuple
 
@@ -11,9 +10,10 @@ import bonobo
 import Levenshtein
 import openai
 import requests
-from bonobo.config import use
 from bs4 import BeautifulSoup
+from common import SERVICES, get_secret  # pylint: disable=import-error
 from dateutil.relativedelta import relativedelta
+from decorators import span_decorator  # pylint: disable=import-error
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from model import (  # pylint: disable=import-error
@@ -24,8 +24,8 @@ from model import (  # pylint: disable=import-error
     StockData,
     StockInfo,
     TargetQuery,
-    Sentiment
 )
+from opentelemetry import trace  # pylint: disable=import-error
 from playwright.sync_api import sync_playwright
 from polygon import RESTClient
 from pydantic import BaseModel
@@ -39,7 +39,6 @@ from youtube import (  # pylint: disable=import-error
     extract_search_data,
     transform_comment_thread_data,
 )
-from common import get_secret
 
 origins = ["*"]
 
@@ -60,11 +59,14 @@ KV_STORE: Dict[ChainType, Any] = (
 
 
 @app.post("/get-logo/")
+@span_decorator
 def get_logo(query: TargetQuery) -> List[Logo]:
     url = "https://www.brandsoftheworld.com"
 
     results = []
     target = query.target
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", target)
     # Open playwright and goto url
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -104,8 +106,11 @@ def get_logo(query: TargetQuery) -> List[Logo]:
 
 
 @app.post("/get-description/")
+@span_decorator
 def get_description(query: TargetQuery) -> Description:
     target = query.target
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", target)
     api_key = get_secret("OPENAI_API_KEY")
 
     client = openai.OpenAI(api_key=api_key)
@@ -124,8 +129,11 @@ def get_description(query: TargetQuery) -> Description:
 
 
 @app.post("/get-stock-info/")
+@span_decorator
 def get_stock_info(query: TargetQuery) -> StockInfo:
     target = query.target
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", target)
     base_url = "https://stockanalysis.com/symbol-lookup"
 
     # Define the query parameters with a space
@@ -161,6 +169,7 @@ def get_stock_info(query: TargetQuery) -> StockInfo:
 
 
 @app.post("/get-stock-data/")
+@span_decorator
 def get_stock_data(query: TargetQuery) -> List[StockData]:
     months = [
         None,
@@ -178,6 +187,9 @@ def get_stock_data(query: TargetQuery) -> List[StockData]:
         "Dec",
     ]
     target = query.target
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", target)
+
     api_key = get_secret("POLYGON_API_KEY")
     client = RESTClient(api_key=api_key)
     res = client.list_tickers(search=target, market="stocks", limit=1)
@@ -204,8 +216,14 @@ def get_stock_data(query: TargetQuery) -> List[StockData]:
 
 
 @app.post("/get-all-data/")
+@span_decorator
 def get_all_data(query: TargetQuery):
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", query.target)
+
+    print(f"IN get_all_data. query={query.target}")
     # Create the Bonobo graph
+    SERVICES["query"] = query
     graph = bonobo.Graph()
     graph.add_chain(store_results, _input=None)
     graph.add_chain(
@@ -236,7 +254,19 @@ def get_all_data(query: TargetQuery):
         reddit_transform_comment_thread_data,
         store_results,
     )
-    bonobo.run(graph, services=get_services(query))
+    result = bonobo.run(graph)
+
+    error_list = []
+    for node in result:
+         stat_string = node.get_statistics_as_string(prefix=' ')
+         print(f"stat_string={stat_string}")
+         stat_array = stat_string.split(' ')
+         if any([True if "err=" in stat else False for stat in stat_array]):
+            print(f"Errors: {str(node)}")
+            error_list.append(str(node))
+    if len(error_list) > 0:
+         raise Exception(f"Errors occurred during pipeline execution: {','.join(error_list)}")
+    
     logo = KV_STORE[ChainType.LOGO_DATA]
     description = KV_STORE[ChainType.DESCRPTION_DATA]
     stock_info = KV_STORE[ChainType.STOCK_INFO_DATA]
@@ -254,8 +284,13 @@ def get_all_data(query: TargetQuery):
 
 
 @app.post("/get-youtube-sentiment/")
+@span_decorator
 def get_youtube_sentiment(query: TargetQuery):
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", query.target)
+
     # Create the Bonobo graph
+    SERVICES["query"] = query
     graph = bonobo.Graph()
     graph.add_chain(store_results, _input=None)
     graph.add_chain(
@@ -264,13 +299,18 @@ def get_youtube_sentiment(query: TargetQuery):
         transform_comment_thread_data,
         store_results,
     )
-    bonobo.run(graph, services=get_services(query))
+    bonobo.run(graph)
     return KV_STORE[ChainType.YOUTUBE_SENTIMENT_DATA]
 
 
 @app.post("/get-reddit-sentiment/")
+@span_decorator
 def get_reddit_sentiment(query: TargetQuery):
+    current_span = trace.get_current_span()
+    current_span.set_attribute("target_query", query.target)
+
     # Create the Bonobo graph
+    SERVICES["query"] = query
     graph = bonobo.Graph()
     graph.add_chain(store_results, _input=None)
     graph.add_chain(
@@ -279,38 +319,32 @@ def get_reddit_sentiment(query: TargetQuery):
         reddit_transform_comment_thread_data,
         store_results,
     )
-    bonobo.run(graph, services=get_services(query))
+    bonobo.run(graph)
     return KV_STORE[ChainType.REDDIT_SENTIMENT_DATA]
 
 
-@use("query")
-def extract_logo_data(
-    query: TargetQuery,
-) -> Generator[Tuple[ChainType, List[Logo]], None, None]:
+def extract_logo_data() -> Generator[Tuple[ChainType, List[Logo]], None, None]:
+    query = SERVICES["query"]
     data = get_logo(query)
     yield (ChainType.LOGO_DATA, data)
 
 
-@use("query")
-def extract_description(
-    query: TargetQuery,
-) -> Generator[Tuple[ChainType, Description], None, None]:
+def extract_description() -> (
+    Generator[Tuple[ChainType, Description], None, None]
+):
+    query = SERVICES["query"]
     data = get_description(query)
     yield (ChainType.DESCRPTION_DATA, data)
 
 
-@use("query")
-def extract_stock_info(
-    query: TargetQuery,
-) -> Generator[Tuple[ChainType, StockInfo], None, None]:
+def extract_stock_info() -> Generator[Tuple[ChainType, StockInfo], None, None]:
+    query = SERVICES["query"]
     data = get_stock_info(query)
     yield (ChainType.STOCK_INFO_DATA, data)
 
 
-@use("query")
-def extract_stock_data(
-    query: TargetQuery,
-) -> Generator[Tuple[ChainType, StockInfo], None, None]:
+def extract_stock_data() -> Generator[Tuple[ChainType, StockInfo], None, None]:
+    query = SERVICES["query"]
     data = get_stock_data(query)
     yield (ChainType.STOCK_PRICE_DATA, data)
 
@@ -326,25 +360,7 @@ def store_results(key: ChainType, data: BaseModel):
     df : pd.DataFrame
         The dataframe output by the transform function.
     """
-    print("IN store_results")
     KV_STORE[key] = data
-
-
-def get_services(query: TargetQuery) -> Dict[str, Any]:
-    """
-    Method used to pass global data and services into graph.
-
-    Parameters
-    ----------
-    query : str
-        The query string that is mapped to a q value in the youtube api call.
-
-    Returns
-    -------
-    dict[str, Any]
-        Returns a dictionary of services for a graph.
-    """
-    return {"query": query}
 
 
 if __name__ == "__main__":
@@ -363,5 +379,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     query = TargetQuery(target=args.target)
-    val = get_reddit_sentiment(query)
+    val = get_all_data(query)
     print(val)

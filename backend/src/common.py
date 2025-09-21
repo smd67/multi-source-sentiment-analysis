@@ -1,5 +1,9 @@
 import os
+from typing import Any, Dict, Union
+
 from nltk.sentiment import SentimentIntensityAnalyzer
+
+SERVICES: Dict[str, Any] = {}
 
 
 def perform_sentiment_analysis(text: str) -> float:
@@ -24,12 +28,12 @@ def perform_sentiment_analysis(text: str) -> float:
     sentiment_score = sid.polarity_scores(text)["compound"]
     return sentiment_score
 
-def get_secret(key: str) -> str:
+
+def get_secret(key: str) -> Union[str, None]:
     # Check for _FILE suffix first
     file_env = f"{key}_FILE"
     if file_env in os.environ:
-        print(f"file_env={file_env}")
-        with open(os.environ[file_env], 'r') as f:
+        with open(os.environ[file_env], "r") as f:
             return f.read().strip()
     # Fall back to environment variable
     return os.environ.get(key)

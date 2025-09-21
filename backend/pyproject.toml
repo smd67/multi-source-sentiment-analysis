@@ -21,7 +21,10 @@ dependencies = [
     "nltk (>=3.9.1,<4.0.0)",
     "googleapi (>=0.1.0,<0.2.0)",
     "types-requests (>=2.32.4.20250809,<3.0.0.0)",
-    "praw (>=7.8.1,<8.0.0)"
+    "praw (>=7.8.1,<8.0.0)",
+    "opentelemetry-distro (>=0.57b0,<0.58)",
+    "opentelemetry-exporter-otlp (>=1.36.0,<2.0.0)",
+    "opentelemetry-sdk (>=1.36.0,<2.0.0)"
 ]
 
 [build-system]
