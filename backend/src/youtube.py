@@ -35,6 +35,15 @@ def extract_search_data() -> Generator[List[Tuple[str, str]], None, None]:
 
 @span_decorator
 def perform_extract_search_data() -> List[Any]:
+    """
+    Method implements the code that does the actual work of
+    extracting the search data.
+
+    Returns
+    -------
+    List[Any]
+        A list of search data results.
+    """
     MAX_RESULTS_PER_PAGE = 50
     MAX_PAGES = 5
     query = SERVICES["query"]
@@ -102,7 +111,24 @@ def extract_comment_thread_data(
 
 
 @span_decorator
-def perform_extract_comment_thread_data(search_data: List[Tuple[str, str]]):
+def perform_extract_comment_thread_data(
+    search_data: List[Tuple[str, str]]
+) -> Dict[str, List[Any]]:
+    """
+    This method implements the actual work of extracting the comment
+    thread data.
+
+    Parameters
+    ----------
+    search_data : List[Tuple[str, str]]
+        A list of search data results.
+
+    Returns
+    -------
+    Dict[str, List[Any]]
+        A dictionary with a key of "items", and a list of responses
+        containing comment thread data.
+    """
     api_service_name = "youtube"
     api_version = "v3"
     api_key = get_secret("GOOGLE_API_KEY")
@@ -153,13 +179,26 @@ def transform_comment_thread_data(
         useable dataframe.
     """
 
-    print("in transform_comment_thread_data")
     percentage = perform_transform_comment_thread_data(comment_thread_data)
     yield (ChainType.YOUTUBE_SENTIMENT_DATA, Sentiment(score=percentage))
 
 
 @span_decorator
 def perform_transform_comment_thread_data(comment_thread_data: Dict) -> float:
+    """
+    Method that implements the actual work to transform the comment thread data
+    into a sentiment score.
+
+    Parameters
+    ----------
+    comment_thread_data : Dict
+        A dictionary of comment thread data
+
+    Returns
+    -------
+    float
+        The sentiment score
+    """
     POSITIVE_THRESHOLD = 0.1
     NEGATIVE_THRESHOLD = -0.1
     data = []

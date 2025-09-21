@@ -1,3 +1,7 @@
+"""
+Pydantic model for the Stock Analyzer API
+"""
+
 from enum import Enum
 from typing import List
 
@@ -18,6 +22,10 @@ class ChainType(Enum):
 
 
 class Logo(BaseModel):
+    """
+    Model for Logo data
+    """
+
     index: int
     url: str
     title: str
@@ -25,29 +33,54 @@ class Logo(BaseModel):
 
 
 class TargetQuery(BaseModel):
+    """
+    Model for query
+    """
+
     target: str
 
 
 class Description(BaseModel):
+    """
+    Model for company description
+    """
+
     text: str
 
 
 class StockInfo(BaseModel):
+    """
+    Model for stock info
+    """
+
     ticker_symbol: str
     company_name: str
     stock_price: float
 
 
 class StockData(BaseModel):
+    """
+    Model for stock data
+    """
+
     month: str
     price: float
 
 
 class Sentiment(BaseModel):
+    """
+    Model for sentiment analysis score
+    """
+
     score: float
 
 
 class CombinedData(BaseModel):
+    """
+    Model for combined data to return all collected data in
+    one API call.
+    """
+
     logo: List[Logo]
     description: Description
     stock_info: StockInfo
