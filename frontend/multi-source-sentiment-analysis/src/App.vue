@@ -59,7 +59,7 @@ export default {
         }
       },
       async fetchDataSingleThreaded() {
-        var apiUrl = 'http://127.0.0.1:8005/get-logo/'; // Replace with your actual API endpoint
+        var apiUrl = 'http://host.docker.internal:8005/get-logo/'; // Replace with your actual API endpoint
         const config = {
             headers: {
                 'Content-Type': 'application/json'
@@ -74,24 +74,24 @@ export default {
           var response = await axios.post(apiUrl, requestBody, config);
           this.logoData = response.data; // Assign the fetched data to tableData
 
-          apiUrl = 'http://127.0.0.1:8005/get-description/';
+          apiUrl = 'http://host.docker.internal:8005/get-description/';
           response = await axios.post(apiUrl, requestBody, config);
           this.description = response.data.text;
 
-          apiUrl = 'http://127.0.0.1:8005/get-stock-info/';
+          apiUrl = 'http://host.docker.internal:8005/get-stock-info/';
           response = await axios.post(apiUrl, requestBody, config);
           this.stockInfo = response.data;
 
-          apiUrl = 'http://127.0.0.1:8005/get-stock-data/';
+          apiUrl = 'http://host.docker.internal:8005/get-stock-data/';
           response = await axios.post(apiUrl, requestBody, config);
           this.stockDataLabels = response.data.map(obj => obj.month);
           this.stockDataValues = response.data.map(obj => obj.price);
 
-          apiUrl = 'http://127.0.0.1:8005/get-youtube-sentiment/';
+          apiUrl = 'http://host.docker.internal:8005/get-youtube-sentiment/';
           response = await axios.post(apiUrl, requestBody, config);
           this.youtubeSentiment = response.data.score;
           
-          apiUrl = 'http://127.0.0.1:8005/get-reddit-sentiment/';
+          apiUrl = 'http://host.docker.internal:8005/get-reddit-sentiment/';
           response = await axios.post(apiUrl, requestBody, config);
           this.redditSentiment = response.data.score;
           console.log(this.redditSentiment);
@@ -106,7 +106,7 @@ export default {
         }
     },
     async fetchDataMultiThreaded() {
-        var apiUrl = 'http://127.0.0.1:8005/get-all-data/'; 
+        var apiUrl = 'http://host.docker.internal:8005/get-all-data/'; 
         const config = {
             headers: {
                 'Content-Type': 'application/json'
