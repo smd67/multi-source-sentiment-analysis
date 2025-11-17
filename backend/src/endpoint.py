@@ -11,6 +11,7 @@ import Levenshtein
 import openai
 import requests
 import traceback
+import sys
 
 from bs4 import BeautifulSoup
 from common import SERVICES, get_secret  # pylint: disable=import-error
@@ -90,7 +91,7 @@ def get_logo(query: TargetQuery) -> List[Logo]:
             page.goto(url)
         except Exception as e:
             print(f"Error: unexpected exception e={e}")
-            traceback.print_stack()
+            traceback.print_exc(file=sys.stdout)
         # You can use various locators like get_by_label, get_by_placeholder,
         # or css selectors
         page.locator("#edit-search-api-views-fulltext").fill(target)
