@@ -28,6 +28,7 @@ COPY pyproject.toml poetry.lock src/download.py ./
 RUN poetry install --no-root
 
 RUN poetry run playwright install-deps
+
 RUN poetry run playwright install chromium
 
 RUN poetry run python download.py
