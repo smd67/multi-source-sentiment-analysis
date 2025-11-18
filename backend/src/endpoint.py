@@ -85,7 +85,7 @@ def get_logo(query: TargetQuery) -> List[Logo]:
     current_span.set_attribute("target_query", target)
     # Open playwright and goto url
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'])
         page = browser.new_page()
         try:
             page.goto(url)
