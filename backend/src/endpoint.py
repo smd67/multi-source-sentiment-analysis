@@ -88,7 +88,7 @@ def get_logo(query: TargetQuery) -> List[Logo]:
         browser = p.chromium.launch(args=['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'])
         page = browser.new_page()
         try:
-            page.goto(url)
+            page.goto(url, timeout=60000)
         except Exception as e:
             print(f"Error: unexpected exception e={e}")
             traceback.print_exc(file=sys.stdout)
